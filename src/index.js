@@ -11,31 +11,36 @@ const unsplashApi = new UnsplashAPI();
 
 const onSearchFormSubmit = async event => {
   event.preventDefault();
-
-  unsplashApi.q = event.target.elements.searchQuery.value.trim();
-
+  
+  unsplashApi.page = 1;
+  unsplashApi.q = event.target.elements.searchQuery.value.trim(); 
+   
+  
 try {
 
   const response = await unsplashApi.fetchPhotosbyQuery();
 
   const { data } = response;
-  console.log(response);
-    if (data.hits.length === 0) {
+
+  event.target.reset();
+  loadMoreBtnEl.classList.add('js-is-hidden');
+
+    if (data.hits.length === 0 || unsplashApi.q === '') {
       
       Notiflix.Notify.failure('Sorry, there are no images matching your search query. Please try again.');
       
-      event.target.reset();
-
       galleryListEl.innerHTML = '';
-
-      loadMoreBtnEl.classList.add('js-is-hidden');
-
+      
       return;
+    }
+
+    if(data.totalHits > 40) {
+      loadMoreBtnEl.classList.remove('js-is-hidden');
     }
 
     galleryListEl.innerHTML = createGalleryCards(data.hits);
     gallery.refresh();
-    loadMoreBtnEl.classList.remove('js-is-hidden');
+    
   } catch(err) {
       console.log(err);
   };
@@ -46,35 +51,26 @@ try {
 const onLoadMoreBtnClick = async event => {
   
   unsplashApi.page +=1;
-
+  
   try {
     const response = await unsplashApi.fetchPhotosbyQuery();
     const { data } = response;
+    
+    if (unsplashApi.page === Math.ceil(data.totalHits / 40)) {
+      loadMoreBtnEl.classList.add('js-is-hidden');
+    }
 
     Notiflix.Notify.info(`Hooray! We found ${data.totalHits} images.`);
+   
     galleryListEl.insertAdjacentHTML('beforeend', createGalleryCards(data.hits));
     gallery.refresh();
-
     
-   
+
   } catch (err) {
     console.log(err)
   }
        
 };
-
-window.addEventListener('scroll', () => {
-  const documentRect = document.documentElement.getBoundingClientRect();
-  
-  console.log('bottom', documentRect.bottom);
-  if (documentRect.bottom < document.documentElement.clientHeight + 500) {
-
-    onLoadMoreBtnClick();
-  }
-
-});
-
-
 
 searchFormEl.addEventListener('submit', onSearchFormSubmit);
 loadMoreBtnEl.addEventListener('click', onLoadMoreBtnClick);
